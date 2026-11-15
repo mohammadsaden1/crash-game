@@ -3,91 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بازی انفجار حرفه‌ای</title>
+    <title>بازی انفجار VIP</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            background-color: #0f172a;
+            background-color: #0b0f19;
             color: #ffffff;
             font-family: Tahoma, sans-serif;
             text-align: center;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
         }
         .container {
-            max-width: 400px;
+            max-width: 420px;
             margin: auto;
-            background: #1e293b;
-            padding: 20px;
+            background: #161e2e;
+            padding: 15px;
             border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            background: #1e293b;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 15px;
+            margin-bottom: 15px;
+        }
+        .balance { color: #facc15; font-weight: bold; }
+        .game-box {
+            position: relative;
+            height: 200px;
+            background: #0f172a;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
         }
         .multiplier {
-            font-size: 48px;
+            font-size: 42px;
             font-weight: bold;
             color: #38bdf8;
-            margin: 30px 0;
+            z-index: 2;
         }
-        .crashed {
-            color: #ef4444 !important;
+        .rocket {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            font-size: 32px;
+            transition: all 0.1s linear;
+            z-index: 1;
         }
-        .win {
-            color: #22c55e !important;
-        }
+        .crashed { color: #ef4444 !important; }
+        .win { color: #22c55e !important; }
+        
         input, button {
             width: 100%;
             padding: 12px;
-            margin: 10px 0;
+            margin: 8px 0;
             border-radius: 8px;
             border: none;
-            font-size: 16px;
+            font-size: 15px;
             box-sizing: border-box;
         }
         input {
             background: #334155;
             color: white;
             text-align: center;
+            font-weight: bold;
         }
         .btn-start {
-            background: #2563eb;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: white;
             font-weight: bold;
             cursor: pointer;
         }
         .btn-cashout {
-            background: #16a34a;
+            background: linear-gradient(135deg, #16a34a, #15803d);
             color: white;
             font-weight: bold;
             cursor: pointer;
             display: none;
         }
-        .balance {
-            font-size: 18px;
-            margin-bottom: 15px;
-            color: #facc15;
+        .btn-deposit {
+            background: #d97706;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
         }
+        .players-box {
+            margin-top: 15px;
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 10px;
+            max-height: 130px;
+            overflow-y: auto;
+            font-size: 13px;
+            text-align: right;
+            border: 1px solid #334155;
+        }
+        .player-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #1e293b;
+        }
+        .p-win { color: #22c55e; }
+        .p-loss { color: #ef4444; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>🎲 بازی انفجار تلگرامی</h2>
-        <div class="balance">موجودی: <span id="balance">1000</span> سکه</div>
-
-        <div>
-            <label>مبلغ شرط:</label>
-            <input type="number" id="betAmount" value="100">
+        <div class="header">
+            <span>👤 کاربر VIP</span>
+            <span class="balance">💰 <span id="balance">1000</span> سکه</span>
         </div>
 
-        <div class="multiplier" id="multiplierDisplay">1.00x</div>
+        <div class="game-box">
+            <div class="rocket" id="rocket">🚀</div>
+            <div class="multiplier" id="multiplierDisplay">1.00x</div>
+        </div>
 
-        <button class="btn-start" id="startBtn" onclick="startGame()">شروع بازی</button>
-        <button class="btn-cashout" id="cashoutBtn" onclick="cashOut()">برداشت (Cash Out)</button>
+        <div>
+            <input type="number" id="betAmount" value="100" min="100">
+        </div>
+
+        <button class="btn-start" id="startBtn" onclick="startGame()">شروع شرط‌بندی</button>
+        <button class="btn-cashout" id="cashoutBtn" onclick="cashOut()">برداشت جایزه (Cash Out)</button>
+        <button class="btn-deposit" onclick="openDeposit()">💳 افزایش موجودی (کارت به کارت)</button>
+
+        <div class="players-box" id="playersList">
+            <div style="color: #94a3b8; text-align: center; margin-bottom: 5px;">live کاربران آنلاین در حال بازی</div>
+        </div>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
-        tg.expand(); // تمام صفحه کردن مینی‌اپ در تلگرام
+        tg.expand();
 
         let balance = 1000;
         let currentMultiplier = 1.00;
@@ -97,10 +154,17 @@
         let cashedOut = false;
         let bet = 100;
 
+        // اسامی کاربران فیک برای ایجاد هیجان واقعی
+        const fakeNames = ["Ali_King", "Reza_Trid", "Sara_99", "Milad_Bazi", "Crypto_Pro", "Nima_20", "Babak_Vip", "Saeed_Boom"];
+
         function startGame() {
             bet = parseInt(document.getElementById('betAmount').value);
-            if (bet > balance || bet <= 0) {
-                alert("موجودی کافی نیست یا مبلغ نامعتبر است!");
+            if (bet < 100) {
+                alert("حداقل مبلغ شرط ۱۰۰ سکه است!");
+                return;
+            }
+            if (bet > balance) {
+                alert("موجودی کافی نیست! لطفا حساب خود را شارژ کنید.");
                 return;
             }
 
@@ -113,28 +177,44 @@
             
             let display = document.getElementById('multiplierDisplay');
             display.className = "multiplier";
+            let rocket = document.getElementById('rocket');
+            rocket.style.bottom = "20px";
+            rocket.style.left = "20px";
             
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('cashoutBtn').style.display = 'block';
             document.getElementById('betAmount').disabled = true;
 
-            // تعیین تصادفی ضریب انفجار (بین 1.1 تا 10)
-            crashPoint = (Math.random() * (10 - 1.1) + 1.1).toFixed(2);
+            // کنترل ضریب (سیاست برد سمت خانه / احتمال انفجار سریع‌تر برای سود مدیر)
+            let randomChance = Math.random();
+            if (randomChance < 0.6) {
+                crashPoint = (Math.random() * (1.8 - 1.1) + 1.1).toFixed(2); // 60 درصد مواقع زود منفجر میشه
+            } else if (randomChance < 0.9) {
+                crashPoint = (Math.random() * (4.5 - 1.9) + 1.9).toFixed(2); // 30 درصد مواقع متوسط
+            } else {
+                crashPoint = (Math.random() * (12.0 - 4.6) + 4.6).toFixed(2); // 10 درصد مواقع ضریب بالا
+            }
 
             gameInterval = setInterval(() => {
-                currentMultiplier += 0.03; // سرعت رشد ضریب
+                currentMultiplier += 0.04;
                 display.innerText = currentMultiplier.toFixed(2) + 'x';
+                
+                // حرکت موشک روی صفحه به صورت گرافیکی
+                let bottomPos = Math.min(140, 20 + (currentMultiplier * 15));
+                let leftPos = Math.min(250, 20 + (currentMultiplier * 20));
+                rocket.style.bottom = bottomPos + 'px';
+                rocket.style.left = leftPos + 'px';
 
                 if (currentMultiplier >= crashPoint) {
                     clearInterval(gameInterval);
                     if (!cashedOut) {
-                        // باخت
                         display.innerText = crashPoint + 'x (انفجار!)';
                         display.className = "multiplier crashed";
+                        rocket.innerHTML = "💥";
                         endGame();
                     }
                 }
-            }, 100);
+            }, 90);
         }
 
         function cashOut() {
@@ -147,11 +227,11 @@
             document.getElementById('balance').innerText = balance;
 
             let display = document.getElementById('multiplierDisplay');
-            display.innerText = currentMultiplier.toFixed(2) + 'x (برد!)';
+            display.innerText = currentMultiplier.toFixed(2) + 'x (برد 🎉)';
             display.className = "multiplier win";
 
             endGame();
-            tg.HapticFeedback.notificationOccurred('success'); // لرزش گوشی در صورت برد
+            tg.HapticFeedback.notificationOccurred('success');
         }
 
         function endGame() {
@@ -159,7 +239,37 @@
             document.getElementById('startBtn').style.display = 'block';
             document.getElementById('cashoutBtn').style.display = 'none';
             document.getElementById('betAmount').disabled = false;
+            setTimeout(() => { document.getElementById('rocket').innerHTML = "🚀"; }, 2000);
         }
+
+        function openDeposit() {
+            // هدایت به ربات تلگرام برای کارت به کارت
+            window.open("https://t.me/" + tg.initDataUnsafe?.receiver?.username || "bot", "_blank");
+            alert("برای افزایش موجودی و کارت به کارت، لطفا به ربات تلگرامی پیام دهید و رسید خود را ارسال کنید.");
+        }
+
+        // شبیه‌سازی زنده کاربران فیک در حال بازی
+        setInterval(() => {
+            let pList = document.getElementById('playersList');
+            let randomName = fakeNames[Math.floor(Math.random() * fakeNames.length)];
+            let randomBet = Math.floor(Math.random() * 900 + 100);
+            let isWin = Math.random() > 0.4;
+            let randomMult = (Math.random() * 3 + 1.2).toFixed(2);
+
+            let row = document.createElement('div');
+            row.className = "player-row";
+            if(isWin) {
+                let winVal = Math.floor(randomBet * randomMult);
+                row.innerHTML = `<span>👤 ${randomName} (${randomBet}ت)</span> <span class="p-win">برد: ${winVal} (${randomMult}x)</span>`;
+            } else {
+                row.innerHTML = `<span>👤 ${randomName} (${randomBet}ت)</span> <span class="p-loss">باخت (انفجار)</span>`;
+            }
+
+            pList.prepend(row);
+            if (pList.children.length > 6) {
+                pList.removeChild(pList.lastChild);
+            }
+        }, 3000);
     </script>
 </body>
 </html>
